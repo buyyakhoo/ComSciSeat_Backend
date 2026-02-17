@@ -31,6 +31,7 @@ app.get('/availability', async (c) => {
 
     if (hasClass) {
         return c.json({ 
+            success: true,
             status: 'CLOSED', 
             message: 'Lab is occupied by a class',
             data: [] 
@@ -54,12 +55,12 @@ app.get('/availability', async (c) => {
     // Step C: แปลงข้อมูลส่งกลับ (Map สถานะ)
     const tableStatus = tables.map(t => ({
         table_id: t.table_id,
-        table_name: t.table_id,
+        table_code: t.table_code,
         is_booked: t.bookings.length > 0, // ถ้ามี booking array > 0 แปลว่าไม่ว่าง
-        booked_by: t.bookings.length > 0 ? 'Busy' : null // ไม่ควรบอกชื่อคนจอง (Privacy)
     }))
 
     return c.json({
+        success: true,
         status: 'OPEN',
         data: tableStatus
     })

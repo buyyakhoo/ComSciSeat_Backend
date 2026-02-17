@@ -16,8 +16,9 @@ app.get('/:lab_id/tables', async (c) => {
     const labId = Number.parseInt(c.req.param('lab_id'))
     
     const tables = await prisma.tables.findMany({
+        select: { table_id: true, table_code: true },
         where: { lab_id: labId },
-        orderBy: { table_id: 'asc' } // เรียง A01, A02...
+        orderBy: { table_id: 'asc' }
     })
 
     return c.json({ success: true, data: tables })

@@ -12,7 +12,7 @@ app.get('/', async (c) => {
 })
 
 app.get('/:table_id', async (c) => {
-    const tableId = c.req.param('table_id')
+    const tableId = Number.parseInt(c.req.param('table_id'))
 
     const table = await prisma.tables.findUnique({
         where: { table_id: tableId }

@@ -39,7 +39,6 @@ app.get('/', (c) => {
 
 app.post('/verify-or-create', async (c) => {
     try {
-        
         const authHeader = c.req.header('Authorization');
         if (!authHeader?.startsWith('Bearer ')) {
             return c.json({ success: false, error: 'No Google token provided' }, 401);
