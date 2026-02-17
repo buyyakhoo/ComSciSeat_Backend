@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users {
+  user_id   String         @id @db.VarChar(8)
+  email     String         @unique @db.VarChar(255)
+  name      String         @db.VarChar(255)
+  user_type user_type_enum @default(student)
+  bookings  bookings[]
+}
+
+model bookings {
+  booking_id   Int            @id @default(autoincrement())
+  user_id      String?        @db.VarChar(255)
+  table_id     String?        @db.VarChar(3)
+  booking_date DateTime       @db.Date
+  slot         time_slot_enum
+  created_at   DateTime?      @default(now()) @db.Timestamp(6)
+  tables       tables?        @relation(fields: [table_id], references: [table_id], onDelete: Cascade, onUpdate: NoAction)
+  users        users?         @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([table_id, booking_date, slot], map: "unique_table_booking")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model class_schedule {
+  class_id    Int            @id @default(autoincrement())
+  lab_id      Int?
+  day_of_week Int?
+  slot        time_slot_enum
+  subject     String         @db.VarChar(50)
+  labs        labs?          @relation(fields: [lab_id], references: [lab_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model labs {
+  lab_id         Int              @id @default(autoincrement())
+  lab_name       String           @db.VarChar(100)
+  class_schedule class_schedule[]
+  tables         tables[]
+}
+
+model tables {
+  table_id String     @id @db.VarChar(3)
+  lab_id   Int?
+  bookings bookings[]
+  labs     labs?      @relation(fields: [lab_id], references: [lab_id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum user_type_enum {
+  student
+  admin
+}
+
+enum time_slot_enum {
+  Morning
+  Lunch
+  Afternoon
+}
