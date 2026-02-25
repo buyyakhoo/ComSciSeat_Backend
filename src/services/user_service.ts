@@ -107,10 +107,10 @@ app.post('/verify-or-create', async (c) => {
     }
 })
 
-app.get('/user/:student_id', authMiddleware, async (c) => {
+app.get('/:student_id', authMiddleware, async (c) => {
     const student_id = c.req.param('student_id')
     
-    console.log(`[PUBLIC] Fetching user with ID: ${student_id}`)
+    console.log(`Fetching user with ID: ${student_id}`)
 
     const user = await prisma.users.findUnique({
         where: { user_id: student_id },

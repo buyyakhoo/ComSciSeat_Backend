@@ -13,12 +13,7 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
-# Generate Prisma client
-# RUN npx prisma db pull
-# RUN npx prisma generate
-CMD sh -c "npx prisma db pull && npx prisma generate"
-
-# Build the SvelteKit app
+# Build Project
 RUN npm run build
 
 # Expose the port the app runs on
