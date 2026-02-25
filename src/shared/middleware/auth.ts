@@ -23,7 +23,7 @@ export type AuthVariables = {
 export async function authMiddleware(c: Context<{ Variables: AuthVariables }>, next: Next) {
     const authHeader = c.req.header('Authorization');
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
         return c.json({
             success: false,
             error: 'No token provided'
@@ -51,7 +51,8 @@ export async function authMiddleware(c: Context<{ Variables: AuthVariables }>, n
     } catch (error) {
         return c.json({
             success: false,
-            error: 'Invalid or expired token'
+            error: 'Invalid or expired token',
+            detail: error
         }, 401);
     }
 }

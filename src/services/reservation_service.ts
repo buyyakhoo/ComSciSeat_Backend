@@ -18,9 +18,20 @@ app.get('/availability', async (c) => {
     }
 
     const requestDate = new Date(dateStr)
-    const dayOfWeek = requestDate.getDay() // 0-6
+    const dayOfWeek = requestDate.getDay() // 1-6
 
-    // Step A: เช็คตารางเรียนก่อน (ClassSchedule)
+    // เช็คว่าเป็นวันอาทิตย์ไหม
+    const isSunday = new Date(dateStr).getDay() === 0;
+    if (isSunday) {
+        return c.json({
+            success: true,
+            status: 'CLOSED',
+            message: 'ห้องแลปได้ปิดทำการในวันอาทิตย์',
+            data: []
+        })
+    }
+
+    // เช็คตารางเรียนก่อน (ClassSchedule)
     const hasClass = await prisma.class_schedule.findFirst({
         where: {
             lab_id: labId,
@@ -33,12 +44,13 @@ app.get('/availability', async (c) => {
         return c.json({ 
             success: true,
             status: 'CLOSED', 
-            message: 'Lab is occupied by a class',
+            message: `ห้องแลปนี้ได้ทำการเรียนการสอนในเวลานี้ รายวิชา ${hasClass.subject}`,
+            class: hasClass,
             data: [] 
         })
     }
 
-    // Step B: ถ้าไม่มีเรียน, ไปดึงโต๊ะทั้งหมด + การจอง
+    //ถ้าไม่มีเรียนไปดึงโต๊ะทั้งหมด + การจอง
     const tables = await prisma.tables.findMany({
         where: { lab_id: labId },
         include: {
@@ -52,11 +64,11 @@ app.get('/availability', async (c) => {
         orderBy: { table_id: 'asc' }
     })
 
-    // Step C: แปลงข้อมูลส่งกลับ (Map สถานะ)
+    // แปลงข้อมูลส่งกลับ (Map สถานะ)
     const tableStatus = tables.map(t => ({
         table_id: t.table_id,
         table_code: t.table_code,
-        is_booked: t.bookings.length > 0, // ถ้ามี booking array > 0 แปลว่าไม่ว่าง
+        is_available: t.bookings.length === 0, // ถ้ามี booking array = 0 แปลว่าว่าง
     }))
 
     return c.json({
@@ -105,24 +117,36 @@ app.post('/book', authMiddleware, async (c) => {
     }
 })
 
-// 3. ดูการจองของฉัน (ต้อง Login)
+// 3. ดูการจองของฉัน
 app.get('/my-bookings', authMiddleware, async (c) => {
     const userId = c.get('userId')
 
     const myBookings = await prisma.bookings.findMany({
         where: { user_id: userId },
-        include: {
-            tables: {
-                include: { labs: true } // Join เอาชื่อโต๊ะกับชื่อ Lab มาด้วย
-            }
-        },
+        select: {
+                booking_id: true,
+                table_id: true,
+                booking_date: true,
+                slot: true,
+                tables: {
+                    select: {
+                        table_code: true,
+                        lab_id: true,
+                        labs: {
+                            select: {
+                                lab_name: true
+                            }
+                        }
+                    }
+                }
+            },
         orderBy: { booking_date: 'desc' }
     })
 
     return c.json({ success: true, data: myBookings })
 })
 
-// 4. ยกเลิกจอง (ต้อง Login และต้องเป็นคนจองเท่านั้น)
+// 4. ยกเลิกจอง
 app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
     const userId = c.get('userId')
     const bookingId = Number.parseInt(c.req.param('booking_id'))
@@ -132,7 +156,7 @@ app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
         where: { booking_id: bookingId }
     })
 
-    if (!booking || booking.user_id !== userId) {
+    if (booking?.user_id !== userId) {
         return c.json({ success: false, error: 'Not authorized or not found' }, 403)
     }
 

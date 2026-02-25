@@ -34,7 +34,7 @@ model bookings {
 model class_schedule {
   class_id    Int            @id @default(autoincrement())
   lab_id      Int?
-  day_of_week Int?
+  day_of_week Int? // between 1 to 6 (1 = Mon, ...m, 6 = Sat)
   slot        time_slot_enum
   subject     String         @db.VarChar(50)
   labs        labs?          @relation(fields: [lab_id], references: [lab_id], onDelete: Cascade, onUpdate: NoAction)
