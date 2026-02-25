@@ -64,16 +64,18 @@ app.get('/availability', async (c) => {
         orderBy: { table_id: 'asc' }
     })
 
-    // แปลงข้อมูลส่งกลับ (Map สถานะ)
     const tableStatus = tables.map(t => ({
         table_id: t.table_id,
         table_code: t.table_code,
         is_available: t.bookings.length === 0, // ถ้ามี booking array = 0 แปลว่าว่าง
     }))
 
+    const isReserved = tableStatus.some(t => t.is_available === false)
+
     return c.json({
         success: true,
         status: 'OPEN',
+        isReserved: isReserved,
         data: tableStatus
     })
 })
