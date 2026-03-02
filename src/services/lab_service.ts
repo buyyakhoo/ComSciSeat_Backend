@@ -24,4 +24,21 @@ app.get('/:lab_id/tables', async (c) => {
     return c.json({ success: true, data: tables })
 })
 
+app.get('/:lab_id/class_schedule', async (c) => {
+    const labId = Number.parseInt(c.req.param('lab_id'))
+    const classSchedule = await prisma.class_schedule.findMany({
+        where: { lab_id: labId },
+        select: {
+            class_id: true,
+            day_of_week: true,
+            slot: true,
+            subject: true
+        },
+        orderBy: [
+            { day_of_week: 'asc' },
+        ]
+    })
+    return c.json({ success: true, data: classSchedule })
+})
+
 export { app as labService }

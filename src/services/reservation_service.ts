@@ -126,22 +126,22 @@ app.get('/my-bookings', authMiddleware, async (c) => {
     const myBookings = await prisma.bookings.findMany({
         where: { user_id: userId },
         select: {
-                booking_id: true,
-                table_id: true,
-                booking_date: true,
-                slot: true,
-                tables: {
-                    select: {
-                        table_code: true,
-                        lab_id: true,
-                        labs: {
-                            select: {
-                                lab_name: true
-                            }
+            booking_id: true,
+            table_id: true,
+            booking_date: true,
+            slot: true,
+            tables: {
+                select: {
+                    table_code: true,
+                    lab_id: true,
+                    labs: {
+                        select: {
+                            lab_name: true
                         }
                     }
                 }
-            },
+            }
+        },
         orderBy: { booking_date: 'desc' }
     })
 
