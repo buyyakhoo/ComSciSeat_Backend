@@ -37,6 +37,36 @@ app.get('/', (c) => {
     })
 })
 
+app.post('/get-token', async (c) => {
+    const internalSecret = c.req.header('X-Internal-Secret');
+    if (internalSecret !== process.env.INTERNAL_SECRET) {
+        return c.json({ success: false, error: 'Unauthorized' }, 401);
+    }
+    const body = await c.req.json();
+    const { email } = body;
+
+    if (!email?.endsWith('@kmitl.ac.th')) {
+        return c.json({ success: false, error: 'Invalid email' }, 401);
+    }
+
+    const student_id = email.split('@')[0].substring(0, 8);
+    const user = await prisma.users.findUnique({
+        where: { user_id: student_id }
+    });
+
+    if (!user) {
+        return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    const token = jwt.sign(
+        { user_id: user.user_id, email: user.email, user_type: user.user_type },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+    );
+
+    return c.json({ success: true, token });
+});
+
 app.post('/verify-or-create', async (c) => {
     try {
         const authHeader = c.req.header('Authorization');

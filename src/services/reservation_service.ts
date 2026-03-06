@@ -4,14 +4,20 @@ import { authMiddleware } from '../shared/middleware/auth.js' // หรือ im
 
 const app = new Hono()
 
-// 1. เช็คสถานะโต๊ะ (หัวใจสำคัญ)
+const isPastDate = (dateStr: string) => {
+    const requestDate = new Date(dateStr)
+    requestDate.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0,)
+    return requestDate.getTime() < today.getTime()
+}
+
+// เช็คสถานะโต๊ะ
 // Frontend ส่ง: ?lab_id=1&date=2024-02-14&slot=Morning
-app.get('/availability', async (c) => {
+app.get('/check-table-availability', async (c) => {
     const labId = Number.parseInt(c.req.query('lab_id') || '0')
     const dateStr = c.req.query('date') // "2024-02-14"
     const slot = c.req.query('slot') as 'Morning' | 'Afternoon' | 'Lunch'
-
-    console.log(`${labId} ${dateStr} ${slot}`)
 
     if (!labId || !dateStr || !slot) {
         return c.json({ error: 'Missing parameters' }, 400)
@@ -80,15 +86,17 @@ app.get('/availability', async (c) => {
     })
 })
 
-// 2. จองโต๊ะ (ต้อง Login)
+// จองโต๊ะ
 app.post('/book', authMiddleware, async (c) => {
-    // ดึง user_id จาก middleware
     const userId = c.get('userId') 
     const body = await c.req.json()
     const { table_id, date, slot } = body
 
+    if (isPastDate(date)) {
+         return c.json({ success: false, error: 'Cannot book a date in the past' }, 400);
+    }
+
     try {
-        // Validation: กันจองซ้ำ (Database Constraint ช่วยระดับนึง แต่เช็คก่อนดีกว่า)
         const existing = await prisma.bookings.findFirst({
             where: {
                 table_id: table_id,
@@ -119,7 +127,7 @@ app.post('/book', authMiddleware, async (c) => {
     }
 })
 
-// 3. ดูการจองของฉัน
+// ดูการจองของฉัน
 app.get('/my-bookings', authMiddleware, async (c) => {
     const userId = c.get('userId')
 
@@ -148,7 +156,7 @@ app.get('/my-bookings', authMiddleware, async (c) => {
     return c.json({ success: true, data: myBookings })
 })
 
-// 4. ยกเลิกจอง
+// ยกเลิกจอง
 app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
     const userId = c.get('userId')
     const bookingId = Number.parseInt(c.req.param('booking_id'))
