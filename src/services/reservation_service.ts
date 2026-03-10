@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { prisma } from '../shared/database/prisma.js'
-import { authMiddleware } from '../shared/middleware/auth.js' // หรือ import จากไฟล์เดิมถ้ายังไม่แยก
+import { authMiddleware } from '../shared/middleware/auth.js'
 
 const app = new Hono()
 
@@ -12,11 +12,9 @@ const isPastDate = (dateStr: string) => {
     return requestDate.getTime() < today.getTime()
 }
 
-// เช็คสถานะโต๊ะ
-// Frontend ส่ง: ?lab_id=1&date=2024-02-14&slot=Morning
-app.get('/check-table-availability', async (c) => {
+app.get('/check-table-availability', authMiddleware, async (c) => {
     const labId = Number.parseInt(c.req.query('lab_id') || '0')
-    const dateStr = c.req.query('date') // "2024-02-14"
+    const dateStr = c.req.query('date') 
     const slot = c.req.query('slot') as 'Morning' | 'Afternoon' | 'Lunch'
 
     if (!labId || !dateStr || !slot) {
@@ -24,9 +22,8 @@ app.get('/check-table-availability', async (c) => {
     }
 
     const requestDate = new Date(dateStr)
-    const dayOfWeek = requestDate.getDay() // 1-6
+    const dayOfWeek = requestDate.getDay() 
 
-    // เช็คว่าเป็นวันอาทิตย์ไหม
     const isSunday = new Date(dateStr).getDay() === 0;
     if (isSunday) {
         return c.json({
@@ -37,7 +34,6 @@ app.get('/check-table-availability', async (c) => {
         })
     }
 
-    // เช็คตารางเรียนก่อน (ClassSchedule)
     const hasClass = await prisma.class_schedule.findFirst({
         where: {
             lab_id: labId,
@@ -56,13 +52,12 @@ app.get('/check-table-availability', async (c) => {
         })
     }
 
-    //ถ้าไม่มีเรียนไปดึงโต๊ะทั้งหมด + การจอง
     const tables = await prisma.tables.findMany({
         where: { lab_id: labId },
         include: {
             bookings: {
                 where: {
-                    booking_date: requestDate, // Prisma จัดการ Type Date ให้
+                    booking_date: requestDate,
                     slot: slot
                 }
             }
@@ -73,7 +68,7 @@ app.get('/check-table-availability', async (c) => {
     const tableStatus = tables.map(t => ({
         table_id: t.table_id,
         table_code: t.table_code,
-        is_available: t.bookings.length === 0, // ถ้ามี booking array = 0 แปลว่าว่าง
+        is_available: t.bookings.length === 0, 
     }))
 
     const isReserved = tableStatus.some(t => t.is_available === false)
@@ -86,7 +81,37 @@ app.get('/check-table-availability', async (c) => {
     })
 })
 
-// จองโต๊ะ
+app.get('/booking-stats', authMiddleware, async (c) => {
+    const userId = c.get('userId')
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const [userUpcoming, userTotal, allTotal] = await Promise.all([
+        prisma.bookings.count({
+            where: {
+                user_id: userId,
+                booking_date: { gte: today }
+            }
+        }),
+        prisma.bookings.count({
+            where: {
+                user_id: userId
+            }
+        }),
+        prisma.bookings.count()
+    ])
+
+    const percentage = allTotal > 0 ? ((userTotal / allTotal) * 100) : 0
+    const stats = {
+        userUpcoming,
+        userTotal,
+        allTotal,
+        percentage
+    }
+
+    return c.json({ success: true, data: stats })
+})
+
 app.post('/book', authMiddleware, async (c) => {
     const userId = c.get('userId') 
     const body = await c.req.json()
@@ -109,7 +134,6 @@ app.post('/book', authMiddleware, async (c) => {
             return c.json({ success: false, error: 'Table already booked' }, 409)
         }
 
-        // Create Booking
         const newBooking = await prisma.bookings.create({
             data: {
                 user_id: userId,
@@ -127,7 +151,6 @@ app.post('/book', authMiddleware, async (c) => {
     }
 })
 
-// ดูการจองของฉัน
 app.get('/my-bookings', authMiddleware, async (c) => {
     const userId = c.get('userId')
 
@@ -156,12 +179,10 @@ app.get('/my-bookings', authMiddleware, async (c) => {
     return c.json({ success: true, data: myBookings })
 })
 
-// ยกเลิกจอง
 app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
     const userId = c.get('userId')
     const bookingId = Number.parseInt(c.req.param('booking_id'))
 
-    // เช็คก่อนว่าเป็นเจ้าของ booking หรือไม่
     const booking = await prisma.bookings.findUnique({
         where: { booking_id: bookingId }
     })

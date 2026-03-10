@@ -3,7 +3,6 @@ import { prisma } from '../shared/database/prisma.js';
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 import { OAuth2Client } from 'google-auth-library';
-
 import { authMiddleware, type AuthVariables } from '../shared/middleware/auth.js';
 
 dotenv.config();
@@ -42,9 +41,10 @@ app.post('/get-token', async (c) => {
     if (internalSecret !== process.env.INTERNAL_SECRET) {
         return c.json({ success: false, error: 'Unauthorized' }, 401);
     }
+
     const body = await c.req.json();
     const { email } = body;
-
+    
     if (!email?.endsWith('@kmitl.ac.th')) {
         return c.json({ success: false, error: 'Invalid email' }, 401);
     }
@@ -84,7 +84,6 @@ app.post('/verify-or-create', async (c) => {
 
         console.log('OAuth verification request from:', body.email);
         
-        // UPSERT: INSERT if not exists, UPDATE if exists
         const user = await prisma.users.upsert({
             where: {
                 user_id: body.user_id
@@ -100,12 +99,10 @@ app.post('/verify-or-create', async (c) => {
             }
         });
 
-        // now fetch with join Role
         const userFull = await prisma.users.findUnique({
             where: { user_id: user.user_id },
         });
 
-        // create JWT Token (like key card)
         const token = jwt.sign(
             {
                 user_id: user.user_id,
@@ -151,38 +148,5 @@ app.get('/:student_id', authMiddleware, async (c) => {
     }
     return c.json({ ...user, success: true }, 200)
 })
-
-// Protected endpoint
-app.get('/profile', authMiddleware, async (c) => {
-    const userId = c.get('userId');
-    const userEmail = c.get('userEmail');
-    const jwtPayload = c.get('jwtPayload');
-    
-    console.log(`[PROTECTED] User ${userId} (${userEmail}) accessing profile`);
-
-    // fetch user profile
-    const user = await prisma.users.findUnique({
-        where: { user_id: userId }
-    });
-
-    if (!user) {
-        return c.json({
-            error: 'User not found',
-            success: false
-        }, 404);
-    }
-
-    return c.json({
-        ...user,
-        success: true,
-        message: 'This is protected route - you are authenticated',
-        jwt_info: {
-            user_id: jwtPayload.user_id,
-            email: jwtPayload.email,
-            user_type: jwtPayload.user_type
-        }
-    }, 200);
-})
-
 
 export { app as userService }

@@ -9,6 +9,7 @@ README.md
 .env
 .env.*
 /devops/*
+/node_modules/*
 
 # To prevent storing dev/temporary container data
 *.csv

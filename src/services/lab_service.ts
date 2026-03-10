@@ -1,17 +1,16 @@
 import { Hono } from 'hono'
 import { prisma } from '../shared/database/prisma.js'
+import { authMiddleware } from '../shared/middleware/auth.js'
 
 const app = new Hono()
 
-// ดึงรายชื่อ Lab ทั้งหมด
-app.get('/', async (c) => {
+app.get('/', authMiddleware, async (c) => {
     const labs = await prisma.labs.findMany({
         orderBy: { lab_id: 'asc' }
     })
     return c.json({ success: true, data: labs })
 })
 
-// ดึงโต๊ะทั้งหมดใน Lab (เอาไว้ render ผัง)
 app.get('/:lab_id/tables', async (c) => {
     const labId = Number.parseInt(c.req.param('lab_id'))
     
@@ -24,7 +23,7 @@ app.get('/:lab_id/tables', async (c) => {
     return c.json({ success: true, data: tables })
 })
 
-app.get('/:lab_id/class_schedule', async (c) => {
+app.get('/:lab_id/class_schedule', authMiddleware, async (c) => {
     const labId = Number.parseInt(c.req.param('lab_id'))
     const classSchedule = await prisma.class_schedule.findMany({
         where: { lab_id: labId },
