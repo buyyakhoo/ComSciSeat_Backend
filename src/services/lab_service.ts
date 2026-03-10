@@ -11,7 +11,7 @@ app.get('/', authMiddleware, async (c) => {
     return c.json({ success: true, data: labs })
 })
 
-app.get('/:lab_id/tables', async (c) => {
+app.get('/:lab_id/tables', authMiddleware, async (c) => {
     const labId = Number.parseInt(c.req.param('lab_id'))
     
     const tables = await prisma.tables.findMany({
