@@ -1,16 +1,19 @@
 import { Hono } from 'hono'
 import { prisma } from '../shared/database/prisma.js'
 import { authMiddleware } from '../shared/middleware/auth.js'
+import nodemailer from 'nodemailer'
+import { cancelationTemplate, reservationTemplate } from '../lib/shared/utils/mail.js'
+import { isPastDate } from '../lib/shared/utils/time.js'
 
+const transporter = nodemailer.createTransport({
+    host: 'smtp-relay.brevo.com',
+    port: 587,
+    auth: {
+        user: process.env.BREVO_SMTP_USER,
+        pass: process.env.BREVO_SMTP_KEY
+    }
+})
 const app = new Hono()
-
-const isPastDate = (dateStr: string) => {
-    const requestDate = new Date(dateStr)
-    requestDate.setHours(0, 0, 0, 0)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0,)
-    return requestDate.getTime() < today.getTime()
-}
 
 app.get('/check-table-availability', authMiddleware, async (c) => {
     const labId = Number.parseInt(c.req.query('lab_id') || '0')
@@ -115,7 +118,7 @@ app.get('/booking-stats', authMiddleware, async (c) => {
 app.post('/book', authMiddleware, async (c) => {
     const userId = c.get('userId') 
     const body = await c.req.json()
-    const { table_id, date, slot } = body
+    const { table_id, table_code, date, slot, lab_id } = body
 
     if (isPastDate(date)) {
          return c.json({ success: false, error: 'Cannot book a date in the past' }, 400);
@@ -129,7 +132,6 @@ app.post('/book', authMiddleware, async (c) => {
                 slot: slot
             }
         })
-
         if (existing) {
             return c.json({ success: false, error: 'Table already booked' }, 409)
         }
@@ -142,6 +144,26 @@ app.post('/book', authMiddleware, async (c) => {
                 slot: slot
             }
         })
+
+        const userInfo = await prisma.users.findUnique({
+            where: { user_id: userId },
+            select: { email: true, name: true }
+        })
+        const labInfo = await prisma.labs.findUnique({
+            where: { lab_id: lab_id },
+            select: { lab_name: true }
+        })
+
+        try {
+            await transporter.sendMail({
+                from: `ComSciSeat <${process.env.BREVO_SMTP_EMAIL}>`,
+                to: `${userInfo?.email}`,
+                subject: 'Booking Confirmation',
+                html: reservationTemplate(userInfo, labInfo, table_code, newBooking)
+            })
+        } catch (emailError) {
+            console.error('Failed to send confirmation email:', emailError)
+        }
 
         return c.json({ success: true, data: newBooking })
 
@@ -184,7 +206,15 @@ app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
     const bookingId = Number.parseInt(c.req.param('booking_id'))
 
     const booking = await prisma.bookings.findUnique({
-        where: { booking_id: bookingId }
+        where: { booking_id: bookingId },
+        include: {
+            users: true,   
+            tables: {     
+                include: { 
+                    labs: true 
+                } 
+            }
+        }
     })
 
     if (booking?.user_id !== userId) {
@@ -192,8 +222,24 @@ app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
     }
 
     await prisma.bookings.delete({
-        where: { booking_id: bookingId }
+        where: { booking_id: bookingId }    
     })
+
+    const userInfo = await prisma.users.findUnique({
+        where: { user_id: userId },
+        select: { email: true, name: true }
+    })
+
+    try {
+        await transporter.sendMail({
+            from: `ComSciSeat <${process.env.BREVO_SMTP_EMAIL}>`,
+            to: `${userInfo?.email}`,
+            subject: 'Booking Cancellation',
+            html: cancelationTemplate(userInfo, booking)
+        })
+    } catch (error) {
+        console.error('Failed to send cancellation email:', error)
+    }
 
     return c.json({ success: true, message: 'Booking cancelled' })
 })

@@ -6,10 +6,10 @@ import { userService } from './services/user_service.js'
 import { labService } from './services/lab_service.js' 
 import { tableService } from './services/table_service.js'
 import { reservationService } from './services/reservation_service.js' 
+import { adminService } from './services/admin_service.js'
 
 const app = new Hono()
 
-// Enable CORS for all routes
 app.use('/*', cors({
   origin: '*',
   credentials: true,
@@ -24,6 +24,7 @@ app.route('/api/user', userService)
 app.route('/api/labs', labService)
 app.route('/api/tables', tableService)
 app.route('/api/reservations', reservationService)
+app.route('/api/admin', adminService)
 
 serve({
   fetch: app.fetch,

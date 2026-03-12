@@ -1,4 +1,3 @@
-// src/shared/middleware/auth.ts
 import type { Context, Next } from 'hono';
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
@@ -7,7 +6,6 @@ dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET
 
-// 1. ประกาศ Type ของ Variables ที่จะฝังใน Context ให้คนอื่นเอาไปใช้ต่อได้
 export type AuthVariables = {
     jwtPayload: {
         user_id: string;
@@ -19,7 +17,6 @@ export type AuthVariables = {
     userType: string;
 }
 
-// 2. ตัว Middleware Function
 export async function authMiddleware(c: Context<{ Variables: AuthVariables }>, next: Next) {
     const authHeader = c.req.header('Authorization');
     

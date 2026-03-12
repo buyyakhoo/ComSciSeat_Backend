@@ -28,13 +28,14 @@ model bookings {
   users        users?         @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([table_id, booking_date, slot], map: "unique_table_booking")
+  @@unique([user_id, booking_date, slot], map: "unique_user_per_slot")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model class_schedule {
   class_id    Int            @id @default(autoincrement())
   lab_id      Int?
-  day_of_week Int? // between 1 to 6 (1 = Mon, ...m, 6 = Sat)
+  day_of_week Int?
   slot        time_slot_enum
   subject     String         @db.VarChar(50)
   labs        labs?          @relation(fields: [lab_id], references: [lab_id], onDelete: Cascade, onUpdate: NoAction)
@@ -42,7 +43,7 @@ model class_schedule {
 
 model labs {
   lab_id         Int              @id @default(autoincrement())
-  lab_name       String           @db.VarChar(100)
+  lab_name       String           @unique(map: "unique_lab_name") @db.VarChar(100)
   class_schedule class_schedule[]
   tables         tables[]
 }
