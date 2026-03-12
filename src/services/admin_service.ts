@@ -9,23 +9,22 @@ app.get('/booking-stats-admin', authMiddleware, async (c) => {
         return c.json({ success: false, error: 'Unauthorized' }, 403)
     }
     
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
+    const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }))
+
+    const todayStr = nowBangkok.toISOString().split('T')[0]           // "2026-03-12"
+    const yesterdayStr = new Date(nowBangkok.getTime() - 86400000)
+        .toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })
+        .split(',')[0]
+        .split('/')
+        .map((v: string) => v.padStart(2, '0'))
+        .join('-')
 
     const [bookingsToday, bookingsYesterday, allBookings, totalLabs, totalTables, totalUsers] = await Promise.all([
         prisma.bookings.count({
-            where: {
-                booking_date: { gte: today, lt: tomorrow }
-            }
+            where: { booking_date: { equals: new Date(todayStr) } }
         }),
         prisma.bookings.count({
-            where: {
-                booking_date: { gte: yesterday, lt: today }
-            }
+            where: { booking_date: { equals: new Date(yesterdayStr) } }
         }),
         prisma.bookings.count(),
         prisma.labs.count(),
@@ -54,6 +53,77 @@ app.get('/booking-stats-admin', authMiddleware, async (c) => {
             totalUsers
         }
     })
+})
+
+app.get('/bookings', authMiddleware, async (c) => {
+    if (c.get('userType') !== 'admin') {
+        return c.json({ success: false, error: 'Unauthorized' }, 403)
+    }
+    const bookings = await prisma.bookings.findMany({
+        include: {
+            users: { select: { name: true, user_id: true } },
+            tables: {
+                select: {
+                    table_code: true,
+                    labs: { select: { lab_name: true } }
+                }
+            }
+        },
+        orderBy: [{ booking_date: 'desc' }, { created_at: 'desc' }]
+    })
+    return c.json({ success: true, data: bookings })
+})
+
+app.post('/bookings', authMiddleware, async (c) => {
+    if (c.get('userType') !== 'admin') {
+        return c.json({ success: false, error: 'Unauthorized' }, 403)
+    }
+    const body = await c.req.json()
+    const { userId, tableId, booking_date, slot } = body
+
+    const userExists = await prisma.users.findUnique({ where: { user_id: userId } })
+    if (!userExists) {
+        return c.json({ success: false, error: 'ไม่พบรหัสนักศึกษานี้ในระบบ' }, 404)
+    }
+
+    const duplicateTable = await prisma.bookings.findFirst({
+        where: { table_id: Number(tableId), booking_date: new Date(booking_date), slot }
+    })
+    if (duplicateTable) {
+        return c.json({ success: false, error: 'โต๊ะนี้ถูกจองแล้วในช่วงเวลานี้' }, 409)
+    }
+
+    const duplicateUser = await prisma.bookings.findFirst({
+        where: { user_id: userId, booking_date: new Date(booking_date), slot }
+    })
+    if (duplicateUser) {
+        return c.json({ success: false, error: 'นักศึกษาคนนี้จองช่วงเวลานี้ไปแล้ว' }, 409)
+    }
+
+    const newBooking = await prisma.bookings.create({
+        data: {
+            user_id: userId,
+            table_id: Number(tableId),
+            booking_date: new Date(booking_date),
+            slot
+        }
+    })
+    return c.json({ success: true, data: newBooking })
+})
+
+app.delete('/bookings/:booking_id', authMiddleware, async (c) => {
+    if (c.get('userType') !== 'admin') {
+        return c.json({ success: false, error: 'Unauthorized' }, 403)
+    }
+    const bookingId = Number(c.req.param('booking_id'))
+    const existing = await prisma.bookings.findUnique({
+        where: { booking_id: bookingId }
+    })
+    if (!existing) {
+        return c.json({ success: false, error: 'ไม่พบการจอง' }, 404)
+    }
+    await prisma.bookings.delete({ where: { booking_id: bookingId } })
+    return c.json({ success: true, message: 'ยกเลิกการจองสำเร็จ' })
 })
 
 app.get('/labs', authMiddleware, async (c) => {
@@ -162,8 +232,6 @@ app.post('/add_table', authMiddleware, async (c) => {
     })
     return c.json({ success: true, data: newTable })
 })
-
-
 
 app.get('/class_schedule', authMiddleware, async (c) => {
     if (c.get('userType') !== 'admin') {
