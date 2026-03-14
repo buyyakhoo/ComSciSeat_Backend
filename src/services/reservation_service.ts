@@ -74,7 +74,15 @@ app.get('/check-table-availability', authMiddleware, async (c) => {
         is_available: t.bookings.length === 0, 
     }))
 
-    const isReserved = tableStatus.some(t => t.is_available === false)
+    const userId = c.get('userId')
+    const userExistingBooking = await prisma.bookings.findFirst({
+        where: {
+            user_id: userId,
+            booking_date: requestDate,
+            slot: slot,
+        }
+    })
+    const isReserved = userExistingBooking !== null
 
     return c.json({
         success: true,
