@@ -1,20 +1,12 @@
 import { Hono } from 'hono'
 import { prisma } from '../shared/database/prisma.js'
 import { authMiddleware } from '../shared/middleware/auth.js'
-import nodemailer from 'nodemailer'
 import { cancelationTemplate, reservationTemplate } from '../lib/shared/utils/mail.js'
 import { isPastDate } from '../lib/shared/utils/time.js'
+import { Resend } from 'resend'
 
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.BREVO_SMTP_USER,
-        pass: process.env.BREVO_SMTP_KEY
-    }
-})
 const app = new Hono()
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 app.get('/check-table-availability', authMiddleware, async (c) => {
     const labId = Number.parseInt(c.req.query('lab_id') || '0')
@@ -164,12 +156,15 @@ app.post('/book', authMiddleware, async (c) => {
         })
 
         try {
-            await transporter.sendMail({
-                from: `ComSciSeat <${process.env.BREVO_SMTP_EMAIL}>`,
+            const { error: emailError } = await resend.emails.send({
+                from: `ComSciSeat <${process.env.RESEND_FROM_EMAIL}>`,
                 to: `${userInfo?.email}`,
                 subject: 'Booking Confirmation',
                 html: reservationTemplate(userInfo, labInfo, table_code, newBooking)
             })
+            if (emailError) {
+                console.error('Failed to send confirmation email:', emailError)
+            }
         } catch (emailError) {
             console.error('Failed to send confirmation email:', emailError)
         }
@@ -240,12 +235,15 @@ app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
     })
 
     try {
-        await transporter.sendMail({
-            from: `ComSciSeat <${process.env.BREVO_SMTP_EMAIL}>`,
+        const { error: emailError } = await resend.emails.send({
+            from: `ComSciSeat <${process.env.RESEND_FROM_EMAIL}>`,
             to: `${userInfo?.email}`,
             subject: 'Booking Cancellation',
             html: cancelationTemplate(userInfo, booking)
         })
+        if (emailError) {
+            console.error('Failed to send cancellation email:', emailError)
+        }
     } catch (error) {
         console.error('Failed to send cancellation email:', error)
     }
