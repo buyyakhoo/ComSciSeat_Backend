@@ -1,23 +1,20 @@
-FROM node:22-alpine
-
-# set working directory
+FROM node:lts AS prebuilt
 WORKDIR /app
-
-# Copy package files first to leverage Docker cache mechanisms
-COPY package.json .
 COPY package-lock.json .
-
-# Install dependencies
+COPY package.json .
 RUN npm install
 
-# Copy the rest of the application
-COPY . .
-
-# Build Project
+FROM prebuilt AS builder
+WORKDIR /app
+COPY src/ src/
+COPY tsconfig.json .
+COPY prisma/ prisma/
 RUN npm run build
 
-# Expose the port the app runs on
-EXPOSE 3000
-
-# Define the command to run the app
+FROM node:lts AS final
+WORKDIR /app
+COPY --from=builder /app/dist/ dist/
+COPY package-lock.json .
+COPY package.json .
+RUN npm install --production
 CMD ["npm", "run", "start"]
