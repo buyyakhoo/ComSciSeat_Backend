@@ -11,7 +11,7 @@ app.get('/booking-stats-admin', authMiddleware, async (c) => {
     
     const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }))
 
-    const todayStr = nowBangkok.toISOString().split('T')[0]           // "2026-03-12"
+    const todayStr = nowBangkok.toISOString().split('T')[0]
     const yesterdayStr = new Date(nowBangkok.getTime() - 86400000)
         .toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })
         .split(',')[0]
@@ -32,21 +32,11 @@ app.get('/booking-stats-admin', authMiddleware, async (c) => {
         prisma.users.count()
     ])
 
-    let bookingRateToday: number
-    if (bookingsYesterday > 0) {
-        bookingRateToday = ((bookingsToday - bookingsYesterday) / bookingsYesterday) * 100
-    } else if (bookingsToday > 0) {
-        bookingRateToday = 100
-    } else {
-        bookingRateToday = 0
-    }
-
     return c.json({
         success: true,
         data: {
             bookingsToday,
             bookingsYesterday,
-            bookingRateToday: Math.round(bookingRateToday * 10) / 10,
             allBookings,
             totalLabs,
             totalTables,
