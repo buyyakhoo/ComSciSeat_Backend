@@ -3,6 +3,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration:run": "prisma generate && dotenv -e .env.test -- vitest run --config vitest.integration.config.ts",
+    "test:integration:coverage": "prisma generate && dotenv -e .env.test -- vitest run --config vitest.integration.config.ts --coverage",
     "generate": "prisma generate",
     "build": "prisma generate && tsc && copyfiles -u 1 \"src/generated/**/*\" dist",
     "start": "node dist/index.js"
@@ -22,9 +27,12 @@
     "@types/node": "^20.11.17",
     "@types/nodemailer": "^7.0.11",
     "@types/pg": "^8.15.5",
+    "@vitest/coverage-v8": "^4.1.1",
     "copyfiles": "^2.4.1",
+    "dotenv-cli": "^11.0.0",
     "prisma": "^6.16.3",
     "tsx": "^4.7.1",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.1"
   }
 }
