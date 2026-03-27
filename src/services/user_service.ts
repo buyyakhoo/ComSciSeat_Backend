@@ -16,11 +16,11 @@ if (!JWT_SECRET) {
 const client = new OAuth2Client(process.env.AUTH_GOOGLE_ID);
 
 async function verifyGoogleToken(token: string) {
-  const ticket = await client.verifyIdToken({
-    idToken: token,
-    audience: process.env.AUTH_GOOGLE_ID,
-  });
-  return ticket.getPayload();
+    const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: process.env.AUTH_GOOGLE_ID,
+    });
+    return ticket.getPayload();
 }
 
 const app = new Hono<{ Variables: AuthVariables }>()
