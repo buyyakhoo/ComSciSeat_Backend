@@ -225,6 +225,10 @@ app.delete('/cancel/:booking_id', authMiddleware, async (c) => {
         return c.json({ success: false, error: 'Not authorized or not found' }, 403)
     }
 
+    if (isPastDate(booking.booking_date.toISOString())) {
+        return c.json({ success: false, error: 'Cannot cancel a booking that has already passed' }, 400)
+    }
+
     await prisma.bookings.delete({
         where: { booking_id: bookingId }    
     })
