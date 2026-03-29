@@ -329,7 +329,7 @@ describe('DELETE /cancel/:booking_id', () => {
     const mockBooking = {
         booking_id: 1,
         user_id: 'test-user-id',
-        table_id: 1, booking_date: new Date(),
+        table_id: 1, booking_date: new Date(Date.now() + 86400000),
         slot: 'Morning', created_at: new Date(),
         users: { user_id: 'test-user-id', name: 'สมชาย', email: 'test@kmitl.ac.th' },
         tables: { table_code: 'A01', labs: { lab_name: 'Computer Lab 1' } }
@@ -353,5 +353,59 @@ describe('DELETE /cancel/:booking_id', () => {
     expect(vi.mocked(prisma.bookings.delete)).toHaveBeenCalledWith({
         where: { booking_id: 1 }
     })
+  })
+
+    it('should return 400 when trying to cancel a booking that has already passed', async () => {
+    // Arrange
+    const yesterday = new Date(Date.now() - 86400000)
+    const mockBooking = {
+        booking_id: 2,
+        user_id: 'test-user-id',
+        table_id: 1, booking_date: yesterday,
+        slot: 'Morning', created_at: new Date(),
+        users: { user_id: 'test-user-id', name: 'สมชาย', email: 'test@kmitl.ac.th' },
+        tables: { table_code: 'A01', labs: { lab_name: 'Computer Lab 1' } }
+    }
+    vi.mocked(prisma.bookings.findUnique).mockResolvedValue(mockBooking as any)
+    // Act
+    const res = await reservationService.request('/cancel/2', {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer test-token' }
+    })
+    // Assert
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Cannot cancel a booking that has already passed')
+    expect(vi.mocked(prisma.bookings.delete)).not.toHaveBeenCalled()
+  })
+
+  it('should allow cancellation when booking is scheduled for tomorrow', async () => {
+    // Arrange — boundary case: วันพรุ่งนี้ยังยกเลิกได้
+    const tomorrow = new Date(Date.now() + 86400000)
+    const mockBooking = {
+        booking_id: 3,
+        user_id: 'test-user-id',
+        table_id: 1, booking_date: tomorrow,
+        slot: 'Afternoon', created_at: new Date(),
+        users: { user_id: 'test-user-id', name: 'สมชาย', email: 'test@kmitl.ac.th' },
+        tables: { table_code: 'A01', labs: { lab_name: 'Computer Lab 1' } }
+    }
+    vi.mocked(prisma.bookings.findUnique).mockResolvedValue(mockBooking as any)
+    vi.mocked(prisma.bookings.delete).mockResolvedValue(mockBooking as any)
+    vi.mocked(prisma.users.findUnique).mockResolvedValue({
+        user_id: 'test-user-id', name: 'สมชาย',
+        email: 'test@kmitl.ac.th', user_type: 'student'
+    })
+    // Act
+    const res = await reservationService.request('/cancel/3', {
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer test-token' }
+    })
+    // Assert
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(vi.mocked(prisma.bookings.delete)).toHaveBeenCalledOnce()
   })
 })

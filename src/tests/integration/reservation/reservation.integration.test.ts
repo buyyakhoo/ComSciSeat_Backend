@@ -226,6 +226,68 @@ describe('Integration: DELETE /cancel/:booking_id', () => {
     })
     expect(stillExists).not.toBeNull()
   })
+
+  it('should return 400 and NOT delete when booking date has already passed', async () => {
+    // Arrange
+    const yesterday = new Date(Date.now() - 86400000)
+
+    const booking = await getPrismaTest().bookings.create({
+      data: {
+        user_id:      'test001',
+        table_id:     testData.table.table_id,
+        booking_date: new Date(yesterday.toISOString().split('T')[0]),
+        slot:         'Morning'
+      }
+    })
+
+    // Act
+    const res = await reservationService.request(`/cancel/${booking.booking_id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${studentToken}` }
+    })
+
+    // Assert HTTP
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toBe('Cannot cancel a booking that has already passed')
+
+    // Assert DB
+    const stillExists = await getPrismaTest().bookings.findUnique({
+      where: { booking_id: booking.booking_id }
+    })
+    expect(stillExists).not.toBeNull()
+  })
+
+  it('should successfully cancel a booking scheduled for tomorrow', async () => {
+    // Arrange
+    const tomorrow = new Date(Date.now() + 86400000)
+    if (tomorrow.getDay() === 0) tomorrow.setDate(tomorrow.getDate() + 1)
+
+    const booking = await getPrismaTest().bookings.create({
+      data: {
+        user_id:      'test001',
+        table_id:     testData.table.table_id,
+        booking_date: new Date(tomorrow.toISOString().split('T')[0]),
+        slot:         'Lunch'
+      }
+    })
+
+    // Act
+    const res = await reservationService.request(`/cancel/${booking.booking_id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${studentToken}` }
+    })
+
+    // Assert HTTP
+    expect(res.status).toBe(200)
+
+    // Assert DB
+    const deleted = await getPrismaTest().bookings.findUnique({
+      where: { booking_id: booking.booking_id }
+    })
+    expect(deleted).toBeNull()
+  })
+
 })
 
 describe('Integration: GET /booking-stats', () => {
