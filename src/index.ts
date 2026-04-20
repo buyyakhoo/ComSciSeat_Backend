@@ -3,10 +3,11 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
 import { userService } from './services/user_service.js'
-import { labService } from './services/lab_service.js' 
+import { labService } from './services/lab_service.js'
 import { tableService } from './services/table_service.js'
-import { reservationService } from './services/reservation_service.js' 
+import { reservationService } from './services/reservation_service.js'
 import { adminService } from './services/admin_service.js'
+import { authService } from './services/auth_service.js'
 
 const app = new Hono()
 
@@ -20,6 +21,7 @@ app.get('/', (c) => {
   return c.text('Hello Hono!')
 })
 
+app.route('/api/auth', authService)
 app.route('/api/user', userService)
 app.route('/api/labs', labService)
 app.route('/api/tables', tableService)
