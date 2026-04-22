@@ -34,7 +34,7 @@ vi.mock('jsonwebtoken', () => ({
     }
 }))
 
-import { authService } from '../../services/auth_service.js'
+import { authService } from '../../routes/auth.routes.js'
 import { prisma } from '../../shared/database/prisma.js'
 import jwt from 'jsonwebtoken'
 

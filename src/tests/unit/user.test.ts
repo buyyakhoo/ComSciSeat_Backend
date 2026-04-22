@@ -31,7 +31,7 @@ vi.mock('../../shared/middleware/auth.js', () => ({
 }))
 
 import { prisma } from '../../shared/database/prisma.js'
-import { userService } from '../../services/user_service.js'
+import { userService } from '../../routes/user.routes.js'
 
 describe('GET /user', () => {
     it('should return service info', async () => {

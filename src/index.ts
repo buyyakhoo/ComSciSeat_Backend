@@ -2,12 +2,12 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
-import { userService } from './services/user_service.js'
-import { labService } from './services/lab_service.js'
-import { tableService } from './services/table_service.js'
-import { reservationService } from './services/reservation_service.js'
-import { adminService } from './services/admin_service.js'
-import { authService } from './services/auth_service.js'
+import { authService } from './routes/auth.routes.js'
+import { userService } from './routes/user.routes.js'
+import { labService } from './routes/lab.routes.js'
+import { tableService } from './routes/table.routes.js'
+import { reservationService } from './routes/reservation.routes.js'
+import { adminService } from './routes/admin.routes.js'
 
 const app = new Hono()
 

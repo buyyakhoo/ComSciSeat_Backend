@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { adminService } from '../../../services/admin_service.js'
+import { adminService } from '../../../routes/admin.routes.js'
 import { getPrismaTest, setupTestDatabase, cleanDatabase } from '../helpers/setup.js'
 import { seedBaseData, generateToken } from '../helpers/seed.js'
 

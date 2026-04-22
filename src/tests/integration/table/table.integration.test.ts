@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { tableService } from '../../../services/table_service.js'
+import { tableService } from '../../../routes/table.routes.js'
 import { getPrismaTest, setupTestDatabase, cleanDatabase } from '../helpers/setup.js'
 import { seedBaseData, generateToken } from '../helpers/seed.js'
 

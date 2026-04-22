@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
-import { authService } from '../../../services/auth_service.js'
+import { authService } from '../../../routes/auth.routes.js'
 import { getPrismaTest, setupTestDatabase, cleanDatabase } from '../helpers/setup.js'
 
 const { mockGenerateAuthUrl, mockGetToken, mockVerifyIdToken } = vi.hoisted(() => {

@@ -18,7 +18,7 @@ vi.mock('../../shared/middleware/auth.js', () => ({
 }))
 
 import { prisma } from '../../shared/database/prisma.js'
-import { tableService } from '../../services/table_service.js'
+import { tableService } from '../../routes/table.routes.js'
 
 describe('GET /tables', () => {
     beforeEach(() => vi.clearAllMocks())

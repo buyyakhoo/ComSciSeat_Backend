@@ -50,7 +50,7 @@ vi.mock('../../shared/middleware/auth.js', () => ({
 }))
 
 import { prisma } from '../../shared/database/prisma.js'
-import { adminService } from '../../services/admin_service.js'
+import { adminService } from '../../routes/admin.routes.js'
 
 const adminHeader = { 'Authorization': 'Bearer test-token' }
 const jsonHeader  = { 'Content-Type': 'application/json', 'Authorization': 'Bearer test-token' }
