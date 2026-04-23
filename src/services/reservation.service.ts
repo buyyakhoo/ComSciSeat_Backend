@@ -80,6 +80,10 @@ export async function createBooking(
 }
 
 export async function getUserInfo(user_id: string) {
+  if (!user_id) {
+    throw new Error('Missing user_id in auth context');
+  }
+
   return prisma.users.findUnique({
     where: { user_id },
     select: { email: true, name: true }
