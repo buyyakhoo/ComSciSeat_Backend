@@ -100,11 +100,7 @@ app.post('/google/callback', async (c) => {
 
     const sessionToken = jwt.sign(
       {
-        user_id: user.user_id,
-        email: user.email,
-        user_type: user.user_type,
-        name: user.name,
-        image: googlePayload.picture,
+        sub: user.user_id
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -117,6 +113,7 @@ app.post('/google/callback', async (c) => {
         user_id: user.user_id,
         email: user.email,
         name: user.name,
+        picture: googlePayload.picture,
         user_type: user.user_type,
       },
     })
