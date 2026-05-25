@@ -1,8 +1,11 @@
 
 import { Hono } from 'hono'
+import { zValidator } from '@hono/zod-validator'
 import { OAuth2Client } from 'google-auth-library'
 import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
+import { googleAuthorizeQuerySchema, googleCallbackSchema } from '../dtos/auth.dto.js'
+import { validationError } from '../dtos/common.dto.js'
 import { upsertUserFromGoogle } from '../services/auth.service.js'
 
 dotenv.config()
@@ -23,104 +26,108 @@ const oauth2Client = new OAuth2Client(
 
 const app = new Hono()
 
-app.get('/google/authorize', async (c) => {
-  try {
-    const redirectUri = c.req.query('redirect_uri') || 'http://localhost:5173/auth/callback'
+app.get(
+  '/google/authorize',
+  zValidator('query', googleAuthorizeQuerySchema, validationError('Invalid authorize query')),
+  async (c) => {
+    try {
+      const { redirect_uri } = c.req.valid('query')
+      const redirectUri = redirect_uri || 'http://localhost:5173/auth/callback'
 
-    const authUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: ['openid', 'email', 'profile'],
-      redirect_uri: redirectUri,
-    })
+      const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: ['openid', 'email', 'profile'],
+        redirect_uri: redirectUri,
+      })
 
-    return c.json({ success: true, authUrl })
-  } catch (error) {
-    console.error('Error generating auth URL:', error)
-    return c.json({ success: false, error: 'Failed to generate auth URL' }, 500)
+      return c.json({ success: true, authUrl })
+    } catch (error) {
+      console.error('Error generating auth URL:', error)
+      return c.json({ success: false, error: 'Failed to generate auth URL' }, 500)
+    }
   }
-})
+)
 
-app.post('/google/callback', async (c) => {
-  try {
-    const body = await c.req.json()
-    const { code, redirectUri } = body
+app.post(
+  '/google/callback',
+  zValidator('json', googleCallbackSchema, validationError('No authorization code provided')),
+  async (c) => {
+    try {
+      const { code, redirectUri } = c.req.valid('json')
 
-    if (!code) {
-      return c.json({ success: false, error: 'No authorization code provided' }, 400)
+      oauth2Client.setCredentials({})
+
+      const { tokens } = await oauth2Client.getToken({
+        code,
+        redirect_uri: redirectUri || 'http://localhost:5173/auth/callback',
+      })
+
+      const idToken = tokens.id_token
+      if (!idToken) {
+        return c.json({ success: false, error: 'No ID token received' }, 400)
+      }
+
+      const ticket = await oauth2Client.verifyIdToken({
+        idToken,
+        audience: AUTH_GOOGLE_ID,
+      })
+
+      const googlePayload = ticket.getPayload()
+      if (!googlePayload) {
+        console.error('No payload from Google token')
+        return c.json({ success: false, error: 'Failed to verify token' }, 400)
+      }
+
+      const email = googlePayload.email
+      console.log('Google payload email:', email)
+      console.log('Email domain check:', email?.endsWith('@kmitl.ac.th'))
+
+      if (!email?.endsWith('@kmitl.ac.th')) {
+        console.error('Email not authorized:', email)
+        return c.json({ success: false, error: 'Email not authorized' }, 403)
+      }
+
+      const username = email.split('@')[0]
+      const student_id = username.substring(0, 8)
+
+      console.log('Google Payload:', {
+        email: googlePayload.email,
+        name: googlePayload.name,
+        picture: googlePayload.picture
+      })
+
+      const user = await upsertUserFromGoogle(
+        student_id,
+        email,
+        googlePayload.name || 'Unknown User'
+      )
+
+      console.log('User created/updated:', user)
+
+      const sessionToken = jwt.sign(
+        {
+          sub: user.user_id
+        },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+
+      return c.json({
+        success: true,
+        token: sessionToken,
+        user: {
+          user_id: user.user_id,
+          email: user.email,
+          name: user.name,
+          picture: googlePayload.picture,
+          user_type: user.user_type,
+        },
+      })
+    } catch (error) {
+      console.error('OAuth callback error:', error)
+      return c.json({ success: false, error: 'Authentication failed' }, 500)
     }
-
-    oauth2Client.setCredentials({})
-
-    const { tokens } = await oauth2Client.getToken({
-      code,
-      redirect_uri: redirectUri || 'http://localhost:5173/auth/callback',
-    })
-
-    const idToken = tokens.id_token
-    if (!idToken) {
-      return c.json({ success: false, error: 'No ID token received' }, 400)
-    }
-
-    const ticket = await oauth2Client.verifyIdToken({
-      idToken,
-      audience: AUTH_GOOGLE_ID,
-    })
-
-    const googlePayload = ticket.getPayload()
-    if (!googlePayload) {
-      console.error('No payload from Google token')
-      return c.json({ success: false, error: 'Failed to verify token' }, 400)
-    }
-
-    const email = googlePayload.email
-    console.log('Google payload email:', email)
-    console.log('Email domain check:', email?.endsWith('@kmitl.ac.th'))
-
-    if (!email?.endsWith('@kmitl.ac.th')) {
-      console.error('Email not authorized:', email)
-      return c.json({ success: false, error: 'Email not authorized' }, 403)
-    }
-
-    const username = email.split('@')[0]
-    const student_id = username.substring(0, 8)
-
-    console.log('Google Payload:', {
-      email: googlePayload.email,
-      name: googlePayload.name,
-      picture: googlePayload.picture
-    })
-
-    const user = await upsertUserFromGoogle(
-      student_id,
-      email,
-      googlePayload.name || 'Unknown User'
-    )
-
-    console.log('User created/updated:', user)
-
-    const sessionToken = jwt.sign(
-      {
-        sub: user.user_id
-      },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    )
-
-    return c.json({
-      success: true,
-      token: sessionToken,
-      user: {
-        user_id: user.user_id,
-        email: user.email,
-        name: user.name,
-        picture: googlePayload.picture,
-        user_type: user.user_type,
-      },
-    })
-  } catch (error) {
-    console.error('OAuth callback error:', error)
-    return c.json({ success: false, error: 'Authentication failed' }, 500)
   }
-})
+)
 
 export { app as authService }

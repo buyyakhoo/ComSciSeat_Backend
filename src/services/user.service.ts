@@ -1,20 +1,17 @@
-import { prisma } from '../shared/database/prisma.js'
+import * as userModel from '../models/user.model.js'
 
 export async function upsertUser(user_id: string, name: string, email: string) {
-  return prisma.users.upsert({
-    where: { user_id },
-    update: { name },
-    create: {
-      user_id,
-      name,
-      email,
-      user_type: 'student'
-    }
-  })
+  return userModel.upsertUser(user_id, name, email)
 }
 
 export async function getUserById(user_id: string) {
-  return prisma.users.findUnique({
-    where: { user_id }
-  })
+  return userModel.findUserById(user_id)
+}
+
+export async function getAllUsers() {
+  return userModel.findAllUsersWithBookingCount()
+}
+
+export async function updateUserType(user_id: string, user_type: string) {
+  return userModel.updateUserType(user_id, user_type)
 }

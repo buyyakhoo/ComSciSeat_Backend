@@ -34,14 +34,14 @@ import { prisma } from '../../shared/database/prisma.js'
 import { userService } from '../../routes/user.routes.js'
 
 describe('GET /user', () => {
-    it('should return service info', async () => {
+    it('should require admin role for listing users', async () => {
         // Act
         const res = await userService.request('/')
 
         // Assert
-        expect(res.status).toBe(200)
+        expect(res.status).toBe(403)
         const body = await res.json()
-        expect(body.message).toContain('User Service')
+        expect(body.error).toBe('Unauthorized')
     })
 })
 
