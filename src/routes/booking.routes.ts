@@ -6,7 +6,7 @@ import {
   createUserBookingSchema,
   tableAvailabilityQuerySchema,
   validationError
-} from '../dtos/reservation.dto.js'
+} from '../dtos/booking.dto.js'
 import { isPastDate } from '../lib/shared/utils/time.js'
 import { authMiddleware } from '../shared/middleware/auth.js'
 import {
@@ -19,7 +19,7 @@ import {
   getBookingStatsAdmin,
   getTableAvailability,
   getUserBookings
-} from '../services/reservation.service.js'
+} from '../services/booking.service.js'
 
 const app = new Hono()
 
@@ -166,4 +166,4 @@ app.delete(
   }
 )
 
-export { app as reservationService }
+export { app as bookingService }

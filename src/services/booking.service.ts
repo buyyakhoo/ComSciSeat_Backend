@@ -1,28 +1,21 @@
-import * as reservationModel from '../models/reservation.model.js'
+import * as bookingModel from '../models/booking.model.js'
 import {
   sendReservationCancellationEmail,
   sendReservationConfirmationEmail
 } from './mail.service.js'
+import { getClassScheduleByLabAndTime } from './class_schedule.service.js'
 import { getUserById } from './user.service.js'
 
 type ServiceResult<T> =
   | { success: true; status: number; data: T }
   | { success: false; status: number; error: string }
 
-export async function getClassScheduleByLabAndTime(
-  lab_id: number,
-  day_of_week: number,
-  slot: string
-) {
-  return reservationModel.findClassScheduleByLabAndTime(lab_id, day_of_week, slot)
-}
-
 export async function getTablesByLabWithBookings(
   lab_id: number,
   booking_date: Date,
   slot: string
 ) {
-  return reservationModel.findTablesByLabWithBookings(lab_id, booking_date, slot)
+  return bookingModel.findTablesByLabWithBookings(lab_id, booking_date, slot)
 }
 
 export async function getTableAvailability(
@@ -76,14 +69,14 @@ export async function getUserExistingBooking(
   booking_date: Date,
   slot: string
 ) {
-  return reservationModel.findBookingByUserDateSlot(user_id, booking_date, slot)
+  return bookingModel.findBookingByUserDateSlot(user_id, booking_date, slot)
 }
 
 export async function getBookingStats(user_id: string, today: Date) {
   const [userUpcoming, userTotal, allTotal] = await Promise.all([
-    reservationModel.countUpcomingUserBookings(user_id, today),
-    reservationModel.countUserBookings(user_id),
-    reservationModel.countAllBookings()
+    bookingModel.countUpcomingUserBookings(user_id, today),
+    bookingModel.countUserBookings(user_id),
+    bookingModel.countAllBookings()
   ])
 
   return { userUpcoming, userTotal, allTotal }
@@ -98,19 +91,19 @@ export async function getBookingStatsAdmin(todayStr: string, yesterdayStr: strin
     totalTables,
     totalUsers
   ] = await Promise.all([
-    reservationModel.countBookingsByDate(new Date(todayStr)),
-    reservationModel.countBookingsByDate(new Date(yesterdayStr)),
-    reservationModel.countAllBookings(),
-    reservationModel.countLabs(),
-    reservationModel.countTables(),
-    reservationModel.countUsers()
+    bookingModel.countBookingsByDate(new Date(todayStr)),
+    bookingModel.countBookingsByDate(new Date(yesterdayStr)),
+    bookingModel.countAllBookings(),
+    bookingModel.countLabs(),
+    bookingModel.countTables(),
+    bookingModel.countUsers()
   ])
 
   return { bookingsToday, bookingsYesterday, allBookings, totalLabs, totalTables, totalUsers }
 }
 
 export async function getAllBookings() {
-  return reservationModel.findAllBookingsWithDetails()
+  return bookingModel.findAllBookingsWithDetails()
 }
 
 export async function getExistingBooking(
@@ -118,7 +111,7 @@ export async function getExistingBooking(
   booking_date: Date,
   slot: string
 ) {
-  return reservationModel.findBookingByTableDateSlot(table_id, booking_date, slot)
+  return bookingModel.findBookingByTableDateSlot(table_id, booking_date, slot)
 }
 
 export async function getExistingBookingByUser(
@@ -126,7 +119,7 @@ export async function getExistingBookingByUser(
   booking_date: Date,
   slot: string
 ) {
-  return reservationModel.findBookingByUserDateSlot(user_id, booking_date, slot)
+  return bookingModel.findBookingByUserDateSlot(user_id, booking_date, slot)
 }
 
 export async function createBooking(
@@ -135,7 +128,7 @@ export async function createBooking(
   booking_date: Date,
   slot: string
 ) {
-  return reservationModel.createBooking(user_id, table_id, booking_date, slot)
+  return bookingModel.createBooking(user_id, table_id, booking_date, slot)
 }
 
 export async function createUserBooking(
@@ -196,23 +189,23 @@ export async function getUserInfo(user_id: string) {
     throw new Error('Missing user_id in auth context')
   }
 
-  return reservationModel.findUserInfo(user_id)
+  return bookingModel.findUserInfo(user_id)
 }
 
 export async function getLabInfo(lab_id: number) {
-  return reservationModel.findLabInfo(lab_id)
+  return bookingModel.findLabInfo(lab_id)
 }
 
 export async function getUserBookings(user_id: string) {
-  return reservationModel.findUserBookings(user_id)
+  return bookingModel.findUserBookings(user_id)
 }
 
 export async function getBookingById(booking_id: number) {
-  return reservationModel.findBookingById(booking_id)
+  return bookingModel.findBookingById(booking_id)
 }
 
 export async function deleteBooking(booking_id: number) {
-  return reservationModel.deleteBooking(booking_id)
+  return bookingModel.deleteBooking(booking_id)
 }
 
 export async function deleteAdminBooking(booking_id: number): Promise<ServiceResult<null>> {

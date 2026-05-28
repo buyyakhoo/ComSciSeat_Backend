@@ -1,15 +1,5 @@
 import { prisma } from '../shared/database/prisma.js'
 
-export async function findClassScheduleByLabAndTime(
-  lab_id: number,
-  day_of_week: number,
-  slot: string
-) {
-  return prisma.class_schedule.findFirst({
-    where: { lab_id, day_of_week, slot: slot as any }
-  })
-}
-
 export async function findTablesByLabWithBookings(
   lab_id: number,
   booking_date: Date,

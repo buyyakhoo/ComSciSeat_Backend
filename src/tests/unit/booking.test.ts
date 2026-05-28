@@ -34,13 +34,13 @@ vi.mock('../../shared/middleware/auth.js', () => ({
 }))
 
 import { prisma } from '../../shared/database/prisma.js'
-import { reservationService } from '../../routes/reservation.routes.js'
+import { bookingService } from '../../routes/booking.routes.js'
 
 describe('GET /check-table-availability', () => {
     beforeEach(() => vi.clearAllMocks())
     it('should return 400 when parameters are missing', async () => {
         // Act
-        const res = await reservationService.request(
+        const res = await bookingService.request(
             '/check-table-availability',
             { headers: { 'Authorization': 'Bearer test-token' } }
         )
@@ -56,7 +56,7 @@ describe('GET /check-table-availability', () => {
         sunday.setDate(sunday.getDate() + ((7 - sunday.getDay()) % 7 || 7))
         const sundayStr = sunday.toISOString().split('T')[0]
         // Act
-        const res = await reservationService.request(
+        const res = await bookingService.request(
             `/check-table-availability?lab_id=1&date=${sundayStr}&slot=Morning`,
             { headers: { 'Authorization': 'Bearer test-token' } }
         )
@@ -78,7 +78,7 @@ describe('GET /check-table-availability', () => {
         monday.setDate(monday.getDate() + ((8 - monday.getDay()) % 7 || 7))
         const mondayStr = monday.toISOString().split('T')[0]
         // Act
-        const res = await reservationService.request(
+        const res = await bookingService.request(
             `/check-table-availability?lab_id=1&date=${mondayStr}&slot=Morning`,
             { headers: { 'Authorization': 'Bearer test-token' } }
         )
@@ -108,7 +108,7 @@ describe('GET /check-table-availability', () => {
         if (tomorrow.getDay() === 0) tomorrow.setDate(tomorrow.getDate() + 1)
         const dateStr = tomorrow.toISOString().split('T')[0]
         // Act
-        const res = await reservationService.request(
+        const res = await bookingService.request(
             `/check-table-availability?lab_id=1&date=${dateStr}&slot=Morning`,
             { headers: { 'Authorization': 'Bearer test-token' } }
         )
@@ -135,7 +135,7 @@ describe('GET /check-table-availability', () => {
         if (tomorrow.getDay() === 0) tomorrow.setDate(tomorrow.getDate() + 1)
         const dateStr = tomorrow.toISOString().split('T')[0]
         // Act
-        const res = await reservationService.request(
+        const res = await bookingService.request(
             `/check-table-availability?lab_id=1&date=${dateStr}&slot=Morning`,
             { headers: { 'Authorization': 'Bearer test-token' } }
         )
@@ -154,7 +154,7 @@ describe('GET /booking-stats', () => {
             .mockResolvedValueOnce(10)
             .mockResolvedValueOnce(100)
         // Act
-        const res = await reservationService.request('/booking-stats', {
+        const res = await bookingService.request('/booking-stats', {
             headers: { 'Authorization': 'Bearer test-token' }
         })
         // Assert
@@ -174,7 +174,7 @@ describe('GET /booking-stats', () => {
         .mockResolvedValueOnce(0)
         .mockResolvedValueOnce(0)
         // Act
-        const res = await reservationService.request('/booking-stats', {
+        const res = await bookingService.request('/booking-stats', {
         headers: { 'Authorization': 'Bearer test-token' }
         })
         // Assert
@@ -186,7 +186,7 @@ describe('GET /booking-stats', () => {
 describe('POST /book', () => {
     beforeEach(() => vi.clearAllMocks())
     it('should return 400 when booking date is in the past', async () => {
-        const res = await reservationService.request('/book', {
+        const res = await bookingService.request('/book', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -210,7 +210,7 @@ describe('POST /book', () => {
             slot: 'Morning', user_id: 'abc', created_at: new Date()
         })
         // Act
-        const res = await reservationService.request('/book', {
+        const res = await bookingService.request('/book', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -243,7 +243,7 @@ describe('POST /book', () => {
             lab_id: 1, lab_name: 'Computer Lab 1'
         })
         // Act
-        const res = await reservationService.request('/book', {
+        const res = await bookingService.request('/book', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -278,7 +278,7 @@ describe('GET /my-bookings', () => {
             }
         ] as any)
         // Act
-        const res = await reservationService.request('/my-bookings', {
+        const res = await bookingService.request('/my-bookings', {
             headers: { 'Authorization': 'Bearer test-token' }
         })
         // Assert
@@ -293,7 +293,7 @@ describe('GET /my-bookings', () => {
     // Arrange
     vi.mocked(prisma.bookings.findMany).mockResolvedValue([])
     // Act
-    const res = await reservationService.request('/my-bookings', {
+    const res = await bookingService.request('/my-bookings', {
         headers: { 'Authorization': 'Bearer test-token' }
     })
     // Assert
@@ -314,7 +314,7 @@ describe('DELETE /cancel/:booking_id', () => {
             users: {}, tables: { labs: {} }
         } as any)
         // Act
-        const res = await reservationService.request('/cancel/1', {
+        const res = await bookingService.request('/cancel/1', {
             method: 'DELETE',
             headers: { 'Authorization': 'Bearer test-token' }
         })
@@ -341,7 +341,7 @@ describe('DELETE /cancel/:booking_id', () => {
         email: 'test@kmitl.ac.th', user_type: 'student'
     })
     // Act
-    const res = await reservationService.request('/cancel/1', {
+    const res = await bookingService.request('/cancel/1', {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer test-token' }
     })
@@ -368,7 +368,7 @@ describe('DELETE /cancel/:booking_id', () => {
     }
     vi.mocked(prisma.bookings.findUnique).mockResolvedValue(mockBooking as any)
     // Act
-    const res = await reservationService.request('/cancel/2', {
+    const res = await bookingService.request('/cancel/2', {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer test-token' }
     })
@@ -398,7 +398,7 @@ describe('DELETE /cancel/:booking_id', () => {
         email: 'test@kmitl.ac.th', user_type: 'student'
     })
     // Act
-    const res = await reservationService.request('/cancel/3', {
+    const res = await bookingService.request('/cancel/3', {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer test-token' }
     })

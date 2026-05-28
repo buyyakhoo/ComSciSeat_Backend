@@ -6,7 +6,8 @@ import { authService } from './routes/auth.routes.js'
 import { userService } from './routes/user.routes.js'
 import { labService } from './routes/lab.routes.js'
 import { tableService } from './routes/table.routes.js'
-import { reservationService } from './routes/reservation.routes.js'
+import { bookingService } from './routes/booking.routes.js'
+import { classScheduleService } from './routes/class_schedule.routes.js'
 
 const app = new Hono()
 
@@ -24,7 +25,8 @@ app.route('/api/auth', authService)
 app.route('/api/user', userService)
 app.route('/api/labs', labService)
 app.route('/api/tables', tableService)
-app.route('/api/reservations', reservationService)
+app.route('/api/bookings', bookingService)
+app.route('/api/class_schedule', classScheduleService)
 
 serve({
   fetch: app.fetch,

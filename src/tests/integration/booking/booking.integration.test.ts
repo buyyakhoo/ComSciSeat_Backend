@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-import { reservationService } from '../../../routes/reservation.routes.js'
+import { bookingService } from '../../../routes/booking.routes.js'
 import { getPrismaTest, setupTestDatabase, cleanDatabase } from '../helpers/setup.js'
 import { seedBaseData, generateToken } from '../helpers/seed.js'
 
@@ -30,7 +30,7 @@ describe('Integration: GET /check-table-availability', () => {
     if (tomorrow.getDay() === 0) tomorrow.setDate(tomorrow.getDate() + 1)
     const dateStr = tomorrow.toISOString().split('T')[0]
     // Act
-    const res = await reservationService.request(
+    const res = await bookingService.request(
       `/check-table-availability?lab_id=${testData.lab.lab_id}&date=${dateStr}&slot=Morning`,
       { headers: { 'Authorization': `Bearer ${studentToken}` } }
     )
@@ -57,7 +57,7 @@ describe('Integration: GET /check-table-availability', () => {
       }
     })
     // Act
-    const res = await reservationService.request(
+    const res = await bookingService.request(
       `/check-table-availability?lab_id=${testData.lab.lab_id}&date=${tomorrow.toISOString().split('T')[0]}&slot=Morning`,
       { headers: { 'Authorization': `Bearer ${studentToken}` } }
     )
@@ -80,7 +80,7 @@ describe('Integration: GET /check-table-availability', () => {
     })
 
     // Act
-    const res = await reservationService.request(
+    const res = await bookingService.request(
       `/check-table-availability?lab_id=${testData.lab.lab_id}&date=${tomorrow.toISOString().split('T')[0]}&slot=Morning`,
       { headers: { 'Authorization': `Bearer ${studentToken}` } }
     )
@@ -98,7 +98,7 @@ describe('Integration: POST /book', () => {
     const tomorrow = new Date(Date.now() + 86400000)
     if (tomorrow.getDay() === 0) tomorrow.setDate(tomorrow.getDate() + 1)
     // Act
-    const res = await reservationService.request('/book', {
+    const res = await bookingService.request('/book', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ describe('Integration: POST /book', () => {
     })
     const anotherToken = generateToken('test002', 'student')
 
-    const res = await reservationService.request('/book', {
+    const res = await bookingService.request('/book', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anotherToken}` },
       body: JSON.stringify({ table_id: testData.table.table_id, table_code: 'A01', date: dateStr, slot: 'Morning', lab_id: testData.lab.lab_id })
@@ -177,7 +177,7 @@ describe('Integration: DELETE /cancel/:booking_id', () => {
     })
 
     // Act
-    const res = await reservationService.request(`/cancel/${booking.booking_id}`, {
+    const res = await bookingService.request(`/cancel/${booking.booking_id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
@@ -212,7 +212,7 @@ describe('Integration: DELETE /cancel/:booking_id', () => {
     const strangerToken = generateToken('test003', 'student')
 
     // Act
-    const res = await reservationService.request(`/cancel/${booking.booking_id}`, {
+    const res = await bookingService.request(`/cancel/${booking.booking_id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${strangerToken}` }
     })
@@ -241,7 +241,7 @@ describe('Integration: DELETE /cancel/:booking_id', () => {
     })
 
     // Act
-    const res = await reservationService.request(`/cancel/${booking.booking_id}`, {
+    const res = await bookingService.request(`/cancel/${booking.booking_id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
@@ -273,7 +273,7 @@ describe('Integration: DELETE /cancel/:booking_id', () => {
     })
 
     // Act
-    const res = await reservationService.request(`/cancel/${booking.booking_id}`, {
+    const res = await bookingService.request(`/cancel/${booking.booking_id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
@@ -305,7 +305,7 @@ describe('Integration: GET /booking-stats', () => {
       }
     })
 
-    const res = await reservationService.request('/booking-stats', {
+    const res = await bookingService.request('/booking-stats', {
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
 
@@ -318,7 +318,7 @@ describe('Integration: GET /booking-stats', () => {
   })
 
   it('should return 0 percentage when no bookings exist', async () => {
-    const res = await reservationService.request('/booking-stats', {
+    const res = await bookingService.request('/booking-stats', {
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
     const body = await res.json()
@@ -340,7 +340,7 @@ describe('Integration: GET /my-bookings', () => {
       }
     })
 
-    const res = await reservationService.request('/my-bookings', {
+    const res = await bookingService.request('/my-bookings', {
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
 
@@ -352,7 +352,7 @@ describe('Integration: GET /my-bookings', () => {
   })
 
   it('should return empty array when user has no bookings', async () => {
-    const res = await reservationService.request('/my-bookings', {
+    const res = await bookingService.request('/my-bookings', {
       headers: { 'Authorization': `Bearer ${studentToken}` }
     })
     const body = await res.json()
