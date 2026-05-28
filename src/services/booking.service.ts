@@ -83,21 +83,12 @@ export async function getBookingStats(user_id: string, today: Date) {
 }
 
 export async function getBookingStatsAdmin(todayStr: string, yesterdayStr: string) {
-  const [
-    bookingsToday,
-    bookingsYesterday,
-    allBookings,
-    totalLabs,
-    totalTables,
-    totalUsers
-  ] = await Promise.all([
-    bookingModel.countBookingsByDate(new Date(todayStr)),
-    bookingModel.countBookingsByDate(new Date(yesterdayStr)),
-    bookingModel.countAllBookings(),
-    bookingModel.countLabs(),
-    bookingModel.countTables(),
-    bookingModel.countUsers()
-  ])
+  const bookingsToday = await bookingModel.countBookingsByDate(new Date(todayStr))
+  const bookingsYesterday = await bookingModel.countBookingsByDate(new Date(yesterdayStr))
+  const allBookings = await bookingModel.countAllBookings()
+  const totalLabs = await bookingModel.countLabs()
+  const totalTables = await bookingModel.countTables()
+  const totalUsers = await bookingModel.countUsers()
 
   return { bookingsToday, bookingsYesterday, allBookings, totalLabs, totalTables, totalUsers }
 }

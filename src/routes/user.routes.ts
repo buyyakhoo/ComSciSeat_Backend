@@ -5,13 +5,19 @@ import jwt from 'jsonwebtoken'
 import dotenv from 'dotenv'
 import { validationError } from '../dtos/common.dto.js'
 import {
-  studentParamSchema,
+  identifierParamSchema,
   updateUserTypeSchema,
   userParamSchema,
   verifyOrCreateUserSchema
 } from '../dtos/user.dto.js'
 import { authMiddleware, type AuthVariables } from '../shared/middleware/auth.js'
-import { getAllUsers, getUserById, updateUserType, upsertUser } from '../services/user.service.js'
+import {
+  getAllUsers,
+  getUserById,
+  getUserByStudentId,
+  updateUserType,
+  upsertUser
+} from '../services/user.service.js'
 
 dotenv.config()
 
@@ -70,13 +76,14 @@ app.post(
 
       console.log('OAuth verification request from:', body.email)
 
-      const user = await upsertUser(body.user_id, body.name, body.email)
+      const studentId = body.student_id ?? (body.user_id?.match(/^\d{8}$/) ? body.user_id : null)
+      const user = await upsertUser(studentId, body.name, body.email)
 
       const userFull = await getUserById(user.user_id)
 
       const token = jwt.sign(
         {
-          user_id: user.user_id,
+          sub: user.user_id,
           email: user.email,
           user_type: userFull?.user_type
         },
@@ -90,6 +97,7 @@ app.post(
         token: token,
         user: {
           user_id: user.user_id,
+          student_id: user.student_id,
           email: user.email,
           name: user.name,
           user_type: userFull?.user_type
@@ -121,15 +129,18 @@ app.patch(
 )
 
 app.get(
-  '/:student_id',
+  '/:identifier',
   authMiddleware,
-  zValidator('param', studentParamSchema, validationError('Invalid student id')),
+  zValidator('param', identifierParamSchema, validationError('Invalid identifier')),
   async (c) => {
-    const { student_id } = c.req.valid('param')
+    const { identifier } = c.req.valid('param')
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-    console.log(`Fetching user with ID: ${student_id}`)
+    console.log(`Fetching user with identifier: ${identifier}`)
 
-    const user = await getUserById(student_id)
+    const user = uuidRegex.test(identifier)
+      ? await getUserById(identifier)
+      : await getUserByStudentId(identifier)
 
     if (!user) {
       return c.json({ error: 'User not found', success: false }, 404)

@@ -21,10 +21,12 @@ export async function findTableById(table_id: number) {
 }
 
 export async function findTableByLabAndCode(lab_id: number, table_code: string) {
-  return prisma.tables.findFirst({
+  return prisma.tables.findUnique({
     where: {
-      lab_id,
-      table_code
+      lab_id_table_code: {
+        lab_id,
+        table_code
+      }
     }
   })
 }

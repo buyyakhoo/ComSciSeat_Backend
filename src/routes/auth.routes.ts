@@ -79,9 +79,6 @@ app.post(
       }
 
       const email = googlePayload.email
-      console.log('Google payload email:', email)
-      console.log('Email domain check:', email?.endsWith('@kmitl.ac.th'))
-
       if (!email?.endsWith('@kmitl.ac.th')) {
         console.error('Email not authorized:', email)
         return c.json({ success: false, error: 'Email not authorized' }, 403)
@@ -90,19 +87,11 @@ app.post(
       const username = email.split('@')[0]
       const student_id = username.substring(0, 8)
 
-      console.log('Google Payload:', {
-        email: googlePayload.email,
-        name: googlePayload.name,
-        picture: googlePayload.picture
-      })
-
       const user = await upsertUserFromGoogle(
         student_id,
         email,
         googlePayload.name || 'Unknown User'
       )
-
-      console.log('User created/updated:', user)
 
       const sessionToken = jwt.sign(
         {
@@ -117,6 +106,7 @@ app.post(
         token: sessionToken,
         user: {
           user_id: user.user_id,
+          student_id: user.student_id,
           email: user.email,
           name: user.name,
           picture: googlePayload.picture,

@@ -4,6 +4,7 @@ vi.mock('../../shared/database/prisma.js', () => ({
     prisma: {
         users: {
             findUnique: vi.fn(),
+            findFirst: vi.fn(),
             upsert:     vi.fn(),
         }
     }
@@ -51,29 +52,33 @@ describe('GET /user/:student_id', () => {
 
     it('should return user when found', async () => {
         // Arrange
-        vi.mocked(prisma.users.findUnique).mockResolvedValue({
-            user_id: 'test001', name: 'สมชาย',
-            email: 'test001@kmitl.ac.th', user_type: 'student'
+        vi.mocked(prisma.users.findFirst).mockResolvedValue({
+            user_id: '550e8400-e29b-41d4-a716-446655440000',
+            student_id: '64000001',
+            name: 'สมชาย',
+            email: 'test001@kmitl.ac.th',
+            user_type: 'student'
         })
 
         // Act
-        const res = await userService.request('/test001', {
+        const res = await userService.request('/64000001', {
             headers: { 'Authorization': 'Bearer test-token' }
         })
 
         // Assert
         expect(res.status).toBe(200)
         const body = await res.json()
-        expect(body.user_id).toBe('test001')
+        expect(body.user_id).toBe('550e8400-e29b-41d4-a716-446655440000')
+        expect(body.student_id).toBe('64000001')
         expect(body.success).toBe(true)
     })
 
     it('should return 404 when user not found', async () => {
         // Arrange
-        vi.mocked(prisma.users.findUnique).mockResolvedValue(null)
+        vi.mocked(prisma.users.findFirst).mockResolvedValue(null)
 
         // Act
-        const res = await userService.request('/notexist', {
+        const res = await userService.request('/64000002', {
             headers: { 'Authorization': 'Bearer test-token' }
         })
 

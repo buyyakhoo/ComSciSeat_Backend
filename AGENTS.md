@@ -143,6 +143,32 @@ Notes:
 - Backend agents should work inside `/backend` unless the user explicitly asks for cross-repository or frontend changes.
 - If a backend change requires a frontend contract update, document the required frontend change instead of editing `/frontend` without permission.
 
+## Database: Connection Pooling (Supabase + Prisma)
+
+The app connects to Supabase PostgreSQL through Supavisor (their connection pooler). This is critical knowledge:
+
+- **DATABASE_URL** in `.env` points to `pooler.supabase.com`. Never edit `.env` directly unless asked.
+- `src/shared/database/prisma.ts` rewrites the URL at runtime: switches port `:5432/` → `:6543/` (transaction mode) and appends `?connection_limit=3&pgbouncer=true`.
+- **Port 5432** = session mode (each query holds a connection for the session lifetime — easy to exhaust the pool).
+- **Port 6543** + `?pgbouncer=true` = transaction mode (connections released after each query).
+- **Pool size**: Supabase free tier allows ~15 concurrent connections. `connection_limit=3` caps Prisma's pool to stay well within that.
+- Never use `Promise.all` with more than 2–3 Prisma queries in a single request — each consumes a pool connection. If you must run many queries, make them sequential.
+- See `booking.service.ts:85` (`getBookingStatsAdmin`) for an example of sequential queries that were refactored from parallel to avoid pool exhaustion.
+
+If you encounter `FATAL: max clients reached in session mode`, check for:
+1. Parallel Prisma queries in `Promise.all`
+2. Server instances not properly disconnecting on restart (SIGINT/SIGTERM handlers in `prisma.ts`)
+3. Missing `?connection_limit` or wrong port
+
+## Database: User Primary Key (UUID)
+
+`users.user_id` uses **UUID** (auto-generated via `gen_random_uuid()`) instead of the old 8-digit student ID format.
+
+- `prisma/schema.prisma`: `user_id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid`
+- The JWT `sub` claim contains the UUID. Old tokens with 8-digit `user_id` will be rejected (401).
+- `src/shared/middleware/auth.ts` has a backward-compat fallback: if the token's `sub` is not a UUID, it tries to look up by `student_id` (8 digits). This only works for students whose `student_id` matches the old format — admin tokens like `admin001` don't match either regex and will 401.
+- Integration tests that hardcode `user_id` as short strings (`'test001'`) will fail against a real UUID column. Seed data must omit `user_id` to let the DB generate it, then capture the returned UUID for assertions.
+
 ## Safety Constraints
 
 - Do not read, print, edit, or expose `.env`, `.env.test`, or any secret-bearing files unless the user explicitly requests it.

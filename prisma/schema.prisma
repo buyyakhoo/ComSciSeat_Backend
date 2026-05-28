@@ -10,22 +10,23 @@ datasource db {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model users {
-  user_id   String         @id @db.VarChar(8)
-  email     String         @unique @db.VarChar(255)
-  name      String         @db.VarChar(255)
-  user_type user_type_enum @default(student)
-  bookings  bookings[]
+  user_id    String          @id(map: "users_new_pkey") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  student_id String?         @db.Char(8)
+  email      String          @unique(map: "users_new_email_key") @db.VarChar(255)
+  name       String          @db.VarChar(255)
+  user_type  user_type_enum? @default(student)
+  bookings   bookings[]
 }
 
 model bookings {
-  booking_id   Int            @id @default(autoincrement())
-  user_id      String?        @db.VarChar(255)
+  booking_id   Int            @id(map: "bookings_new_pkey") @default(autoincrement())
+  user_id      String?        @db.Uuid
   table_id     Int?
   booking_date DateTime       @db.Date
   slot         time_slot_enum
   created_at   DateTime?      @default(now()) @db.Timestamp(6)
-  users        users?         @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction)
-  tables       tables?        @relation(fields: [table_id], references: [table_id], onDelete: Cascade, onUpdate: NoAction)
+  tables       tables?        @relation(fields: [table_id], references: [table_id], onDelete: Cascade, onUpdate: NoAction, map: "bookings_new_table_id_fkey")
+  users        users?         @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "bookings_new_user_id_fkey")
 
   @@unique([table_id, booking_date, slot], map: "unique_table_booking")
   @@unique([user_id, booking_date, slot], map: "unique_user_per_slot")
@@ -44,7 +45,7 @@ model class_schedule {
 model labs {
   lab_id         Int              @id @default(autoincrement())
   lab_name       String           @unique(map: "unique_lab_name") @db.VarChar(100)
-  lab_code       String?          @db.VarChar(50)
+  lab_code       String           @db.VarChar(50)
   class_schedule class_schedule[]
   tables         tables[]
 }
@@ -55,6 +56,8 @@ model tables {
   lab_id     Int?
   bookings   bookings[]
   labs       labs?      @relation(fields: [lab_id], references: [lab_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([lab_id, table_code], map: "unique_table_code_per_lab")
 }
 
 enum user_type_enum {

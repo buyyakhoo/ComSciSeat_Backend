@@ -446,9 +446,7 @@ describe('Auth Service', () => {
             expect(res.status).toBe(200)
             expect(vi.mocked(jwt.sign)).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    user_id: 'test003',
-                    email: 'test003@kmitl.ac.th',
-                    user_type: 'student'
+                    sub: 'test003'
                 }),
                 expect.any(String),
                 expect.objectContaining({ expiresIn: '7d' })

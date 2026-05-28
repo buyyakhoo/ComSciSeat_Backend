@@ -1,11 +1,11 @@
 import { prisma } from '../shared/database/prisma.js'
 
-export async function upsertUser(user_id: string, name: string, email: string) {
+export async function upsertUser(student_id: string | null, name: string, email: string) {
   return prisma.users.upsert({
-    where: { user_id },
-    update: { name },
+    where: { email },
+    update: { name, student_id },
     create: {
-      user_id,
+      student_id,
       name,
       email,
       user_type: 'student'
@@ -19,10 +19,17 @@ export async function findUserById(user_id: string) {
   })
 }
 
+export async function findUserByStudentId(student_id: string) {
+  return prisma.users.findFirst({
+    where: { student_id }
+  })
+}
+
 export async function findAllUsersWithBookingCount() {
   return prisma.users.findMany({
     select: {
       user_id: true,
+      student_id: true,
       name: true,
       email: true,
       user_type: true,
@@ -30,7 +37,7 @@ export async function findAllUsersWithBookingCount() {
         select: { bookings: true }
       }
     },
-    orderBy: { user_id: 'asc' }
+    orderBy: { student_id: 'asc' }
   })
 }
 

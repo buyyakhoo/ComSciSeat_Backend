@@ -22,6 +22,22 @@ import {
 } from '../services/booking.service.js'
 
 const app = new Hono()
+const BANGKOK_TIME_ZONE = 'Asia/Bangkok'
+const ONE_DAY_MS = 24 * 60 * 60 * 1000
+const bangkokDateFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: BANGKOK_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+})
+
+function formatBangkokDate(date: Date) {
+  return bangkokDateFormatter.format(date)
+}
+
+function subtractDays(date: Date, days: number) {
+  return new Date(date.getTime() - days * ONE_DAY_MS)
+}
 
 function isAdmin(c: any) {
   return c.get('userType') === 'admin'
@@ -61,14 +77,9 @@ app.get('/booking-stats', authMiddleware, async (c) => {
 })
 
 app.get('/stats', authMiddleware, adminMiddleware, async (c) => {
-  const nowBangkok = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }))
-  const todayStr = nowBangkok.toISOString().split('T')[0]
-  const yesterdayStr = new Date(nowBangkok.getTime() - 86400000)
-    .toLocaleString('en-US', { timeZone: 'Asia/Bangkok' })
-    .split(',')[0]
-    .split('/')
-    .map((v: string) => v.padStart(2, '0'))
-    .join('-')
+  const nowBangkok = new Date()
+  const todayStr = formatBangkokDate(nowBangkok)
+  const yesterdayStr = formatBangkokDate(subtractDays(nowBangkok, 1))
 
   const stats = await getBookingStatsAdmin(todayStr, yesterdayStr)
   return c.json({ success: true, data: stats })

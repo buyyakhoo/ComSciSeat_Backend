@@ -6,6 +6,8 @@ import { prisma } from '../database/prisma.js'
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const STUDENT_ID_REGEX = /^\d{8}$/
 
 export type AuthVariables = {
     jwtPayload: {
@@ -35,26 +37,39 @@ export async function authMiddleware(c: Context<{ Variables: AuthVariables }>, n
 
         const decoded = jwt.verify(token, JWT_SECRET) as {
             sub?: string;
+            user_id?: string;
             exp?: number;
             iat?: number;
         };
 
-        const userId = decoded.sub;
+        const tokenUserId = decoded.sub ?? decoded.user_id;
 
-        if (!userId) {
+        if (!tokenUserId) {
             return c.json({
                 success: false,
-                error: 'Invalid token payload: missing sub'
+                error: 'Invalid token payload: missing user id'
             }, 401);
         }
 
-        const user = await prisma.users.findUnique({
-            where: { user_id: userId },
+        const user = UUID_REGEX.test(tokenUserId)
+          ? await prisma.users.findUnique({
+            where: { user_id: tokenUserId },
             select: {
+                user_id: true,
                 email: true,
                 user_type: true
             }
-        });
+          })
+          : STUDENT_ID_REGEX.test(tokenUserId)
+            ? await prisma.users.findFirst({
+              where: { student_id: tokenUserId },
+              select: {
+                user_id: true,
+                email: true,
+                user_type: true
+              }
+            })
+            : null;
 
         if (!user) {
             return c.json({
@@ -64,11 +79,11 @@ export async function authMiddleware(c: Context<{ Variables: AuthVariables }>, n
         }
         
         c.set('jwtPayload', {
-            sub: userId,
+            sub: user.user_id,
             exp: decoded.exp,
             iat: decoded.iat
         });
-        c.set('userId', userId);
+        c.set('userId', user.user_id);
         c.set('userEmail', user.email ?? '');
         c.set('userType', user.user_type ?? 'student');
         
